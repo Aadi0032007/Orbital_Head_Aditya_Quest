@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
@@ -50,8 +50,17 @@ public class SingleImReceiver : MonoBehaviour
         Debug.Log($"Connected control to {host}:{controlPort}");
 
         combinedTex = new Texture2D(1280, 480, TextureFormat.RGB24, false);
-        leftTex = new Texture2D(640, 480, TextureFormat.RGB24, false);
-        rightTex = new Texture2D(640, 480, TextureFormat.RGB24, false);
+
+        // both materials share the same combinedTex,
+        // and shader + UV tiling do the split/swizzle for you:
+        leftEyeMaterial.SetTexture("_MainTex", combinedTex);
+        rightEyeMaterial.SetTexture("_MainTex", combinedTex);
+
+        leftEyeMaterial.mainTextureScale = new Vector2(0.5f, 1f);
+        leftEyeMaterial.mainTextureOffset = new Vector2(0.0f, 0f);
+
+        rightEyeMaterial.mainTextureScale = new Vector2(0.5f, 1f);
+        rightEyeMaterial.mainTextureOffset = new Vector2(0.5f, 0f);
 
         receiveThread = new Thread(ReceiveLoop) { IsBackground = true };
         receiveThread.Start();
@@ -93,41 +102,10 @@ public class SingleImReceiver : MonoBehaviour
                 latestImageData = null;
             }
         }
-        if (imageData != null && combinedTex.LoadImage(imageData))
+        if (imageData != null && combinedTex.LoadImage(imageData, markNonReadable: true))
         {
-            ApplyFrameToEyes();
+            // combinedTex.Apply(updateMipmaps:false, makeNoLongerReadable:true);
         }
-    }
-
-    private void ApplyFrameToEyes()
-    {
-        var pixels = combinedTex.GetPixels32();
-        for (int i = 0; i < pixels.Length; i++)
-        {
-            byte tmp = pixels[i].r;
-            pixels[i].r = pixels[i].b;
-            pixels[i].b = tmp;
-        }
-        combinedTex.SetPixels32(pixels);
-        combinedTex.Apply();
-
-        int halfW = combinedTex.width / 2, h = combinedTex.height;
-        Color[] src = combinedTex.GetPixels();
-        Color[] left = new Color[halfW * h];
-        Color[] right = new Color[halfW * h];
-
-        for (int y = 0; y < h; y++)
-            for (int x = 0; x < halfW; x++)
-            {
-                left[y * halfW + x] = src[y * combinedTex.width + x];
-                right[y * halfW + x] = src[y * combinedTex.width + x + halfW];
-            }
-
-        leftTex.SetPixels(left); leftTex.Apply();
-        rightTex.SetPixels(right); rightTex.Apply();
-
-        leftEyeMaterial.mainTexture = leftTex;
-        rightEyeMaterial.mainTexture = rightTex;
     }
 
     private void ReceiveLoop()
