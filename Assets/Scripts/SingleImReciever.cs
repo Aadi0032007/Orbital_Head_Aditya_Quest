@@ -9,7 +9,7 @@ public class SingleImReceiver : MonoBehaviour
     [Header("Tracking")] public Transform camera;
 
     [Header("Server Settings")]
-    public string host = "50.39.109.27";
+    public string host = "100.112.170.88";
     public int controlPort = 60065;
     public int videoPort = 60064;
 
